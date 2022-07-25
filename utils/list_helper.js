@@ -41,9 +41,33 @@ const mostBlogs = (blogs) => {
   return authorWithMostBlogs
 }
 
+const mostLikes = (blogs) => {
+  if (!blogs.length) return {}
+  const groupByAuthor = _.groupBy(blogs, 'author')
+  const authorLikes = _.mapValues(groupByAuthor, (array) => {
+    return array.reduce((acc, curr) => acc + curr.likes, 0) 
+  })
+
+  const authorsArray =
+    Object.keys(authorLikes).map(author => {
+      return {
+        'author': author,
+        'likes': authorLikes[author]
+      }
+    })
+
+  const authorWithMostLikes =
+    authorsArray.reduce((arr, curr) => {
+      return arr.likes < curr.likes ? curr : arr
+    })
+
+  return authorWithMostLikes
+}
+
 module.exports = {
   dummy,
   totalLikes,
   favoriteBlog,
-  mostBlogs
+  mostBlogs,
+  mostLikes
 }
