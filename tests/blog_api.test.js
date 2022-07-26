@@ -83,6 +83,22 @@ test('title and url missing respond 400 bad request', async () => {
     .expect(400)
 })
 
+test('delete blog', async () => {
+  const responseBeforeDel = await api.get('/api/blogs')
+  const blogsBefore = responseBeforeDel.body
+
+  await api
+    .delete(`/api/blogs/${blogsBefore[blogsBefore.length-1].id}`)
+    .expect(204)
+
+  const responseAfterDel = await api.get('/api/blogs')
+  const blogsAfter = responseAfterDel.body
+  expect(blogsAfter).toHaveLength(blogsBefore.length-1)
+
+  const urls = blogsAfter.map(b => b.url)
+  expect(urls).not.toContain(blogsBefore[blogsBefore.length-1].url)
+})
+
 afterAll(() => {
   mongoose.connection.close()
 })
