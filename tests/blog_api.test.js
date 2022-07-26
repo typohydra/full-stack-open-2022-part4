@@ -32,6 +32,28 @@ test('unique identifier property is named id', async() => {
   }
 })
 
+test('new blog is added', async () => {
+  const newBlog = {
+    title: 'test title',
+    author: 'test author',
+    url: 'test url',
+    likes: 200
+  }
+
+  await api
+    .post('/api/blogs')
+    .send(newBlog)
+    .expect(201)
+    .expect('Content-Type', /application\/json/)
+
+  const response = await api.get('/api/blogs')
+  const blogs = response.body
+  expect(blogs).toHaveLength(helper.initialBlogs.length + 1)
+  
+  const urls = blogs.map(b => b.url)
+  expect(urls).toContain('test url')
+})
+
 afterAll(() => {
   mongoose.connection.close()
 })
