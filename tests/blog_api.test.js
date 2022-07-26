@@ -99,6 +99,23 @@ test('delete blog', async () => {
   expect(urls).not.toContain(blogsBefore[blogsBefore.length-1].url)
 })
 
+test('update blog', async () => {
+  const responseBeforeUp = await api.get('/api/blogs')
+  const blogsBefore = responseBeforeUp.body
+
+  await api
+    .put(`/api/blogs/${blogsBefore[blogsBefore.length-1].id}`)
+    .send({likes: 4242})
+    .expect(200)
+
+  const responseAfterUp = await api.get('/api/blogs')
+  const blogsAfter = responseAfterUp.body
+  expect(blogsAfter).toHaveLength(blogsBefore.length)
+  
+  const likes = blogsAfter.map(b => b.likes)
+  expect(likes[blogsBefore.length-1]).toBe(4242)
+})
+
 afterAll(() => {
   mongoose.connection.close()
 })
