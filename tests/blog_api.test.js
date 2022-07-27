@@ -3,7 +3,11 @@ const mongoose = require('mongoose')
 const helper = require('./test_api_helper')
 const app = require('../app')
 const api = supertest(app)
+
+const bcrypt = require('bcrypt')
+
 const Blog = require('../models/blog')
+const User = require('../models/user')
 
 beforeEach(async () => {
   await Blog.deleteMany({})
@@ -115,6 +119,56 @@ test('update blog', async () => {
   const likes = blogsAfter.map(b => b.likes)
   expect(likes[blogsBefore.length-1]).toBe(4242)
 })
+
+describe('when invalid user is created', () => {
+  beforeEach(async () => {
+    await User.deleteMany({})
+
+    const passwordHash = await bcrypt.hash('sekret', 10)
+    const user = new User({ username: 'root', passwordHash })
+
+    await user.save()
+  })
+
+  test('username and password missing', async () => {
+    const usersBefore = await helper.usersInDb()
+    
+    const newUser = {
+      username: '',
+      name: 'test',
+      password: '',
+    }
+
+    await api
+      .post('/api/users')
+      .send(newUser)
+      .expect(400)
+
+    const usersAfter = await helper.usersInDb()
+    expect(usersAfter).toHaveLength(usersBefore.length)
+  })
+
+  test('username isn\'t unique', async () => {
+    const usersBefore = await helper.usersInDb()
+    
+    const newUser = {
+      username: 'root',
+      name: 'test',
+      password: 'test',
+    }
+
+    await api
+      .post('/api/users')
+      .send(newUser)
+      .expect(400)
+      .expect({error: 'username must be unique'})
+
+    const usersAfter = await helper.usersInDb()
+    expect(usersAfter).toHaveLength(usersBefore.length)
+  })
+})
+
+
 
 afterAll(() => {
   mongoose.connection.close()
