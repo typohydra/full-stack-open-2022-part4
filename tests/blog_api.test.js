@@ -9,6 +9,21 @@ const bcrypt = require('bcrypt')
 const Blog = require('../models/blog')
 const User = require('../models/user')
 
+const newToken = async () => {
+  const user = {
+    username: 'testerUser',
+    name: 'tester user',
+    password: 'test'
+  }
+
+  // create new user
+  await api.post('/api/users').send(user)
+  // login user to get token
+  const response = await api.post('/api/login').send(user)
+
+  return response.body.token
+}
+
 beforeEach(async () => {
   await Blog.deleteMany({})
 
@@ -37,6 +52,8 @@ test('unique identifier property is named id', async() => {
 })
 
 test('new blog is added', async () => {
+  const token = await newToken()
+
   const newBlog = {
     title: 'test title',
     author: 'test author',
@@ -46,6 +63,7 @@ test('new blog is added', async () => {
 
   await api
     .post('/api/blogs')
+    .set('Authorization', `bearer ${token}`) 
     .send(newBlog)
     .expect(201)
     .expect('Content-Type', /application\/json/)
@@ -58,7 +76,9 @@ test('new blog is added', async () => {
   expect(urls).toContain('test url')
 })
 
-test('likes property is missing default to 0', async () => {
+test('if likes property is missing default to 0', async () => {
+  const token = await newToken()
+
   const newBlog = {
     title: 'test title',
     author: 'test author',
@@ -68,6 +88,7 @@ test('likes property is missing default to 0', async () => {
   const response = await 
     api
       .post('/api/blogs')
+      .set('Authorization', `bearer ${token}`) 
       .send(newBlog)
       .expect(201)
       .expect('Content-Type', /application\/json/)
@@ -76,6 +97,8 @@ test('likes property is missing default to 0', async () => {
 })
 
 test('title and url missing respond 400 bad request', async () => {
+  const token = await newToken()
+
   const newBlog = {
     author: 'test author',
     likes: 42
@@ -83,16 +106,36 @@ test('title and url missing respond 400 bad request', async () => {
 
   await api
     .post('/api/blogs')
+    .set('Authorization', `bearer ${token}`) 
     .send(newBlog)
     .expect(400)
 })
 
 test('delete blog', async () => {
+  const token = await newToken()
+
+  // add new blog to delete
+  const newBlog = {
+    title: 'test title to delete',
+    author: 'test author to delete',
+    url: 'test url to delete',
+    likes: 200
+  }
+
+  await api
+    .post('/api/blogs')
+    .set('Authorization', `bearer ${token}`) 
+    .send(newBlog)
+    .expect(201)
+    .expect('Content-Type', /application\/json/)
+
+  // delete last blog
   const responseBeforeDel = await api.get('/api/blogs')
   const blogsBefore = responseBeforeDel.body
 
   await api
     .delete(`/api/blogs/${blogsBefore[blogsBefore.length-1].id}`)
+    .set('Authorization', `bearer ${token}`) 
     .expect(204)
 
   const responseAfterDel = await api.get('/api/blogs')
@@ -168,7 +211,25 @@ describe('when invalid user is created', () => {
   })
 })
 
+test('adding a blog fails with status code 401 Unauthorized if a token is not provided', async () => {
+  const newBlog = {
+    title: 'test title',
+    author: 'test author',
+    url: 'test url',
+    likes: 200
+  }
 
+  await api
+    .post('/api/blogs')
+    .set('Authorization', null) 
+    .send(newBlog)
+    .expect(401)
+    .expect('Content-Type', /application\/json/)
+
+    const response = await api.get('/api/blogs')
+    const blogs = response.body
+    expect(blogs).toHaveLength(helper.initialBlogs.length)
+})
 
 afterAll(() => {
   mongoose.connection.close()
