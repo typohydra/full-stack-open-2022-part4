@@ -40,8 +40,10 @@ blogsRouter.delete('/:id', middleware.userExtractor, async (request, response) =
 
 blogsRouter.put('/:id', async (request, response) => {
   const {title, author, url, likes} = request.body
+  const user = request.body.user
 
   const blog = {
+    user: user.id,
     title,
     author,
     url,
